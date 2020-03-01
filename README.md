@@ -3,8 +3,8 @@
 > ...
 
 - Installation
-- Headfirst
-- 
+- Headfirst - Build your first chat application with ExpressJS + ReactJS + Firebase 
+- Advanced
 
 ## Installation
 
