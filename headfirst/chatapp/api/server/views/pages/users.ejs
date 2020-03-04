@@ -3,8 +3,8 @@
     <h1><%= appName %></h1>
     <p><%= tagline %></p>
     <ul>
-    	<% drinks.map(function(drink){ %>
-    		<li><%= `${drink.name} - ${drink.drunkness}` %></li>
+    	<% users.map(function(user){ %>
+    		<li><%= `${user.uid} - ${user.email}` %></li>
     	<% }); %>
     </ul>
 </div>

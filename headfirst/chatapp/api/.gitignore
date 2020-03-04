@@ -3,3 +3,4 @@ node_modules
 dist-server
 yarn-error.log
 yarn.lock
+firebaseServiceAccountKey.json

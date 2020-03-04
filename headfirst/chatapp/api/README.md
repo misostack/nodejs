@@ -13,7 +13,7 @@ yarn add express
 
 # dependency packages for app
 yarn add dotenv
-yarn add firebase
+yarn add firebase-admin
 
 yarn install
 
@@ -32,3 +32,11 @@ yarn watch:dev
 ## Rules
 
 - dotenv : https://www.npmjs.com/package/dotenv
+
+## Local
+
+```bash
+APP_ENV=LOCAL
+DEBUG=true
+FIREBASE_SERVICE_ACCOUNT=/mnt/e/code/ezcoder/cs1/nodejs/headfirst/chatapp/api/firebaseServiceAccountKey.json
+```
