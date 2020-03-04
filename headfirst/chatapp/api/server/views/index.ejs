@@ -1,0 +1,10 @@
+<% layout('base.layout') -%>
+<div class="jumbotron">
+    <h1>This is great</h1>
+    <p><%= tagline %></p>
+    <ul>
+    	<% drinks.map(function(drink){ %>
+    		<li><%= `${drink.name} - ${drink.drunkness}` %></li>
+    	<% }); %>
+    </ul>
+</div>
