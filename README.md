@@ -13,7 +13,7 @@
 ```bash
 # install node version manager
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.2/install.sh | bash
-# then run the following commands
+# then run the following commands, and add them to your .bashrc
 
 export NVM_DIR="$HOME/.nvm"
 
