@@ -2,7 +2,12 @@
   "dependencies": {
     "@hapi/joi": "^17.1.1",
     "benchmark": "^2.1.4",
+    "chalk": "^4.1.1",
     "colors": "^1.4.0",
-    "microtime": "^3.0.0"
+    "csv": "^5.5.0",
+    "json-server": "^0.16.3",
+    "lodash": "^4.17.21",
+    "microtime": "^3.0.0",
+    "sprintf-js": "^1.1.2"
   }
 }

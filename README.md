@@ -1,12 +1,18 @@
 # NodeJS Courses
 
+## Topics
+
+1. :heavy_check_mark Installation
+2. :heavy_check_mark Validation Data with joi
+3. :heavy_check_mark [File I/O](./file/README.md)
+
 > ...
 
 - Installation
 - Headfirst - Build your first chat application with ExpressJS + ReactJS + Firebase
 - Advanced
 
-## Installation
+## 1. Installation
 
 - Ref : https://github.com/nvm-sh/nvm#installing-and-updating
 
@@ -25,7 +31,7 @@ export NVM_DIR="$HOME/.nvm"
 nvm --version
 ```
 
-## Usage NVM
+### Usage NVM
 
 ```bash
   624  nvm --version
@@ -43,12 +49,12 @@ nvm --version
 
 ```
 
-## Debug
+### Debug
 
 1. VSCOde : https://code.visualstudio.com/docs/nodejs/nodejs-debugging#_launch-configuration-attributes
 2. From NodeJS : https://nodejs.org/en/docs/guides/debugging-getting-started/
 
-## Optimization
+### Optimization
 
 1.
 
@@ -56,7 +62,7 @@ nvm --version
 node --allow-natives-syntax program.js
 ```
 
-## Common patterns
+### Common patterns
 
 1. Rest Pattern
 
@@ -82,7 +88,7 @@ const weekend = ["sat", "sun"];
 const days_in_a_week = [...week, ...weekend];
 ```
 
-## Arrow functions
+### Arrow functions
 
 > - Allow you to shorten function declarations
 > - They are not assigned their own this - arrow functions inherit this from the call site
@@ -98,9 +104,7 @@ function Counter() {
 new Counter();
 ```
 
-## String manipulation
-
-## Validation Data with joi
+## 2. Validation Data with joi
 
 - [Joi](https://hapi.dev/module/joi/api/?v=17.1.1)
 

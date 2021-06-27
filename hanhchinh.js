@@ -13,8 +13,9 @@ Data structure
 }
 */
 
-const Benchmark = require("benchmark");
 const fs = require("fs");
+const path = require("path");
+const dirPath = path.resolve(__dirname);
 
 const sampleData = {
   citId: "01",
@@ -26,18 +27,28 @@ const sampleData = {
   type: "Phường",
 };
 
-const writeFile = (filename, type) => {};
+const writeFile = (filepath, data) => {
+  fs.writeFile();
+};
 
-const readFile = (filepath, type) => {
-  fs.readFile(filepath, "utf8", (error, data) => {
-    if (error) {
-      return console.error(error);
-    }
-    console.log(data);
-    return data;
+const readFile = (filepath) => {
+  return new Promise((resolve, reject) => {
+    fs.readFile(filepath, "utf8", (err, content) => {
+      if (err) {
+        return reject(error);
+      }
+      return resolve(content);
+    });
   });
 };
 
 (async function () {
   // add tests
+  try {
+    const csvPath = path.resolve(dirPath, "vn-city-district-yard.csv");
+    const csvContent = await readFile(csvPath);
+    console.log(csvContent.length);
+  } catch (err) {
+    console.error(err);
+  }
 })();

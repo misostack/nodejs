@@ -1,2 +1,5 @@
 example.txt
 node_modules
+**/tmp/*
+!**/tmp/.keep
+**/*.txt
