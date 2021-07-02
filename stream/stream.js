@@ -26,33 +26,43 @@ const write100lines = () => {
 };
 
 // WRITE 1 to 1,000,000 line
-const write1MLines = () => {
-  const fileHandler = fs.createWriteStream(FILEPATH);
+const write1MLines = (from, to) => {
+  return new Promise((resolve) => {
+    const fileHandler = fs.createWriteStream(FILEPATH, {
+      flags: "a+",
+    });
 
-  for (let i = 1; i <= 1e6; i++) {
-    fileHandler.write(`This is line ${i < 1e6 ? i + "\n" : i}`);
-  }
+    for (let i = from; i <= to; i++) {
+      if (i % 9999 == 0) {
+        console.log(`This is line ${i < BILLION ? i + "\n" : i}`);
+        console.log(`Memory usaged : ${JSON.stringify(process.memoryUsage())}`);
+      }
+      fileHandler.write(`This is line ${i}\n`);
+    }
 
-  // end stream
-  fileHandler.end(() => {
-    calculateRunTime();
+    // end stream
+    fileHandler.end(() => {
+      resolve(true);
+    });
   });
 };
 
-const write1BLines = () => {
-  const fileHandler = fs.createWriteStream(FILEPATH);
+const write1BLines = async () => {
+  // const fileHandler = fs.createWriteStream(FILEPATH);
 
-  for (let i = 1; i <= BILLION; i++) {
-    if (i % 9999 == 0) {
-      console.log(`This is line ${i < BILLION ? i + "\n" : i}`);
-    }
-    fileHandler.write(`This is line ${i < BILLION ? i + "\n" : i}`);
+  for (let i = 0; i < BILLION / 1e6; i += 1) {
+    await write1MLines(i * 1e6, (i + 1) * 1e6);
+    // if (i % 9999 == 0) {
+    //   console.log(`This is line ${i < BILLION ? i + "\n" : i}`);
+    //   console.log(`Memory usaged : ${JSON.stringify(process.memoryUsage())}`);
+    // }
+    // fileHandler.write(`This is line ${i < BILLION ? i + "\n" : i}`);
   }
 
   // end stream
-  fileHandler.end(() => {
-    calculateRunTime();
-  });
+  // fileHandler.end(() => {
+  //   calculateRunTime();
+  // });
 };
 
 const calculateRunTime = () => {

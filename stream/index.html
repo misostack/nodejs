@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script type="text/javascript">
+    function streamDataFromZeroToHero() {
+
+      var xhr = new XMLHttpRequest();
+      var appRoot = document.getElementById('app')
+      var apiEndpoint = 'http://localhost:1337';
+      xhr.open('GET', `${apiEndpoint}/stream`);
+      xhr.seenBytes = 0;
+
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState > 2) {
+          var newData = xhr.responseText.substr(xhr.seenBytes);
+          let newItem = document.createElement('div');
+          console.error('data', newData);
+          newItem.innerHTML = newData.toString();
+          appRoot.appendChild(newItem);
+          // process newData
+          xhr.seenBytes = xhr.responseText.length;
+        }
+      };
+
+      xhr.send();
+    }
+
+  </script>
+</head>
+
+<body>
+  <h1>Streaming Data</h1>
+  <button onclick="streamDataFromZeroToHero();">START STREAMING</button>
+  <video id="videoPlayer" controls>
+    <source src="http://localhost:1337/video" type="video/mp4">
+  </video>
+  <div id="app">
+  </div>
+</body>
+
+</html>
