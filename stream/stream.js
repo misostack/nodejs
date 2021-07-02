@@ -6,7 +6,8 @@ const microtime = require("microtime");
 const fs = require("fs");
 const path = require("path");
 const DIRPATH = path.resolve(__dirname);
-const FILEPATH = path.resolve(DIRPATH, "large100k.txt");
+const FILEPATH = path.resolve(DIRPATH, "large1b.txt");
+const BILLION = 1e9;
 
 var startTime = microtime.now();
 const write100lines = () => {
@@ -38,6 +39,22 @@ const write1MLines = () => {
   });
 };
 
+const write1BLines = () => {
+  const fileHandler = fs.createWriteStream(FILEPATH);
+
+  for (let i = 1; i <= BILLION; i++) {
+    if (i % 9999 == 0) {
+      console.log(`This is line ${i < BILLION ? i + "\n" : i}`);
+    }
+    fileHandler.write(`This is line ${i < BILLION ? i + "\n" : i}`);
+  }
+
+  // end stream
+  fileHandler.end(() => {
+    calculateRunTime();
+  });
+};
+
 const calculateRunTime = () => {
   const microSecs = microtime.now() - startTime;
   const miliSecs = microSecs / 1000;
@@ -59,5 +76,6 @@ const read100Lines = () => {
 
 (async () => {
   // write100lines();
-  read100Lines();
+  write1BLines();
+  // read100Lines();
 })();
