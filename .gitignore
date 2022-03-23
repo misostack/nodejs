@@ -4,3 +4,5 @@ node_modules
 !**/tmp/.keep
 **/*.txt
 **/*.mp4
+
+!mysql/*.txt
