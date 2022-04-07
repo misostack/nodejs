@@ -1,7 +1,7 @@
 const mysql = require("mysql");
 const poolLimit = 10;
 var pool = mysql.createPool(
-  `mysql://root:123456@localhost/jsguru-typeorm?debug=false&charset=utf8mb4&timezone=+0700&connectionLimit=${poolLimit}`
+  `mysql://root:123456@localhost/jsguru?debug=false&charset=utf8mb4&timezone=+0700&connectionLimit=${poolLimit}`
 );
 
 exports.connection = {
