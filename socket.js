@@ -12,9 +12,7 @@ const io = new Server(server);
 const pubClient = createClient({ url: "redis://localhost:6379" });
 const subClient = pubClient.duplicate();
 
-Promise.all([pubClient.connect(), subClient.connect()]).then(() => {
-  io.adapter(createAdapter(pubClient, subClient));
-});
+io.adapter(createAdapter(pubClient, subClient));
 
 app.get("/", (req, res) => {
   console.log(req.socket);
@@ -23,6 +21,12 @@ app.get("/", (req, res) => {
 
 io.on("connection", (socket) => {
   console.log("a user connected");
+  socket.on("example:create", function (payload) {
+    const socket = this;
+    console.log(payload, socket.send);
+    socket.send({ id: 1 });
+    return;
+  });
 });
 
 server.listen(3000, () => {
