@@ -1,5 +1,9 @@
 const { MongoClient } = require("mongodb");
 const dayjs = require("dayjs");
+const timezone = require("dayjs/plugin/timezone");
+const utc = require("dayjs/plugin/utc");
+dayjs.extend(utc); // must import both utc + timezone to allow timzone work
+dayjs.extend(timezone);
 const faker = require("@faker-js/faker").default;
 // or as an es module:
 // import { MongoClient } from 'mongodb'
@@ -12,7 +16,7 @@ const client = new MongoClient(url);
 const dbName = "sonnm_finance";
 
 const events = require("events");
-const { date } = require("@hapi/joi/lib/template");
+
 const EVT_CREATE_GOLD_RECORD = Symbol();
 
 const eventEmitter = new events.EventEmitter();
@@ -23,9 +27,11 @@ async function main() {
   console.log("Connected successfully to server");
   const db = client.db(dbName);
   const startTime = dayjs();
-  await createGoldReportData(db);
+  // await createGoldReportData(db);
   const endTime = dayjs();
   console.error(`${endTime.diff(startTime, "milliseconds")}`);
+  const oldestRecord = await createDailyStats(db);
+  console.log(oldestRecord);
   // the following code examples can be pasted here...
 
   return "done.";
@@ -35,6 +41,23 @@ async function insertReportData(db, collectionName, values) {
   const collection = db.collection(collectionName);
   const insertResult = await collection.insertMany(values);
   return insertResult;
+}
+
+async function createDailyStats(db) {
+  // find the oldest record
+  const findResult = await db
+    .collection("goldReports")
+    .find({})
+    .sort({ reportTime: 1 })
+    .limit(1)
+    .toArray();
+
+  console.log("Found documents =>", findResult[0].reportTime);
+  // sum by hour
+  const oldestTime = dayjs(findResult[0].reportTime);
+  console.log(oldestTime, oldestTime.tz("Asia/Ho_Chi_Minh"));
+
+  return oldestTime;
 }
 
 function createGoldReportValues(index, steps) {
