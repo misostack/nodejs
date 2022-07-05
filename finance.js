@@ -16,6 +16,7 @@ const client = new MongoClient(url);
 const dbName = "sonnm_finance";
 
 const events = require("events");
+const { cloneDeep } = require("lodash");
 
 const EVT_CREATE_GOLD_RECORD = Symbol();
 
@@ -43,6 +44,18 @@ async function insertReportData(db, collectionName, values) {
   return insertResult;
 }
 
+function findStream(db, collectionName, query, options = {}) {
+  const collection = db.collection(collectionName);
+  const cursor = collection.find(query, options);
+  const streamObject = {
+    cursor,
+    eachRecord: function (callback) {
+      this.cursor.stream().on("data", (doc) => callback(doc));
+    },
+  };
+  return streamObject;
+}
+
 async function createDailyStats(db) {
   // find the oldest record
   const findResult = await db
@@ -54,10 +67,19 @@ async function createDailyStats(db) {
 
   console.log("Found documents =>", findResult[0].reportTime);
   // sum by hour
-  const oldestTime = dayjs(findResult[0].reportTime);
-  console.log(oldestTime, oldestTime.tz("Asia/Ho_Chi_Minh"));
+  const startTime = dayjs(findResult[0].reportTime)
+    .tz("Asia/Ho_Chi_Minh")
+    .startOf("D");
+  const endTime = cloneDeep(startTime).add(1, "days");
+  // stream
+  const stream = findStream(db, "goldReports", {
+    reportTime: { $gte: startTime.valueOf(), $lt: endTime.valueOf() },
+  });
+  stream.eachRecord(async (record) => {
+    console.log(record);
+  });
 
-  return oldestTime;
+  return startTime;
 }
 
 function createGoldReportValues(index, steps) {
