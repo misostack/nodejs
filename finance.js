@@ -28,8 +28,8 @@ async function main() {
   const db = client.db(dbName);
   const startTime = dayjs();
   // await createGoldReportData(db, true);
-  const endTime = dayjs();
   const monthStats = await createStats(db, "Asia/Ho_Chi_Minh");
+  const endTime = dayjs();
   console.log(monthStats);
   console.error(`${endTime.diff(startTime, "milliseconds")}`);
   // the following code examples can be pasted here...
