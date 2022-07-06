@@ -16,7 +16,6 @@ const client = new MongoClient(url);
 const dbName = "sonnm_finance";
 
 const events = require("events");
-const { cloneDeep } = require("lodash");
 
 const EVT_CREATE_GOLD_RECORD = Symbol();
 
@@ -28,11 +27,11 @@ async function main() {
   console.log("Connected successfully to server");
   const db = client.db(dbName);
   const startTime = dayjs();
-  // await createGoldReportData(db);
+  // await createGoldReportData(db, true);
   const endTime = dayjs();
+  const monthStats = await createStats(db, "Asia/Ho_Chi_Minh");
+  console.log(monthStats);
   console.error(`${endTime.diff(startTime, "milliseconds")}`);
-  const oldestRecord = await createDailyStats(db);
-  console.log(oldestRecord);
   // the following code examples can be pasted here...
 
   return "done.";
@@ -50,13 +49,24 @@ function findStream(db, collectionName, query, options = {}) {
   const streamObject = {
     cursor,
     eachRecord: function (callback) {
-      this.cursor.stream().on("data", (doc) => callback(doc));
+      return new Promise((resolve) => {
+        this.cursor
+          .stream()
+          .on("data", async (doc) => {
+            console.log("doc", dayjs(doc.reportTime).format());
+            callback(doc);
+          })
+          .on("end", () => {
+            console.log("end stream");
+            resolve(true);
+          });
+      });
     },
   };
   return streamObject;
 }
 
-async function createDailyStats(db) {
+async function createStats(db, timezone, statType = "months") {
   // find the oldest record
   const findResult = await db
     .collection("goldReports")
@@ -64,25 +74,99 @@ async function createDailyStats(db) {
     .sort({ reportTime: 1 })
     .limit(1)
     .toArray();
+  // const startTime = dayjs(findResult[0].reportTime).tz(timezone);
+  const currentTime = dayjs().tz(timezone);
+  const endTime = currentTime.endOf("hours");
+  let startTime = endTime.clone().add(-1, "hours");
+  const statTypes = {
+    hours: "hours",
+    days: "days",
+    weeks: "weeks",
+    months: "months",
+    years: "years",
+  };
+  console.log(startTime.valueOf(), endTime.valueOf());
 
-  console.log("Found documents =>", findResult[0].reportTime);
-  // sum by hour
-  const startTime = dayjs(findResult[0].reportTime)
-    .tz("Asia/Ho_Chi_Minh")
-    .startOf("D");
-  const endTime = cloneDeep(startTime).add(1, "days");
   // stream
+
+  const hourSlots = createHourStats(db, endTime);
+
   const stream = findStream(db, "goldReports", {
-    reportTime: { $gte: startTime.valueOf(), $lt: endTime.valueOf() },
-  });
-  stream.eachRecord(async (record) => {
-    console.log(record);
+    reportTime: { $gte: startTime.valueOf(), $lte: endTime.valueOf() },
   });
 
-  return startTime;
+  await stream.eachRecord(async (record) => {
+    addHourSlots(hourSlots, record);
+  });
+
+  return { hourSlots };
 }
 
-function createGoldReportValues(index, steps) {
+function addHourSlots(hourSlots, record) {
+  for (let i = 0; i < hourSlots.length; i++) {
+    // in hour slot time range
+    const end = hourSlots[i].timestamp;
+    const start = end.clone().add(-1, "minutes").startOf("milliseconds");
+    console.log(
+      start.format(),
+      end.format(),
+      dayjs(record.reportTime).format(),
+      record.reportTime >= start.valueOf(),
+      record.reportTime < end.valueOf()
+    );
+    if (
+      record.reportTime >= start.valueOf() &&
+      record.reportTime < end.valueOf()
+    ) {
+      hourSlots[i].records.push(record);
+    }
+  }
+  // aggregate final output
+  for (let i = 0; i < hourSlots.length; i++) {
+    let initialValue = { sell: 0, buy: 0 };
+    let values = hourSlots[i].records.reduce((prev, next) => {
+      return { sell: prev.sell + next.sell, buy: prev.buy + next.buy };
+    }, initialValue);
+    console.log(values);
+    hourSlots[i] = {
+      ...hourSlots[i],
+      values,
+    };
+  }
+  // const slots = hourSlots.map((slot) => {
+  //   let initialValue = { sell: 0, buy: 0 };
+  //   let values = slot.records.reduce((prev, next) => {
+  //     prev
+  //       ? { sell: prev.sell + next.sell, buy: prev.buy + next.buy }
+  //       : {
+  //           sell: next.sell,
+  //           buy: next.buy,
+  //         };
+  //   }, initialValue);
+
+  //   return {
+  //     ...slot,
+  //     values,
+  //   };
+  // });
+}
+
+function createHourStats(db, toTime) {
+  // prepare hour slots : 60 slots, by minutes
+  const slots = [];
+  for (let i = 0; i < 60; i++) {
+    slots.push({
+      timestamp: toTime
+        .clone()
+        .startOf("minutes")
+        .add(-1 * i, "minutes"),
+      records: [],
+    });
+  }
+  return slots;
+}
+
+function createGoldReportValues(index, steps, future = false) {
   const goldTypes = [
     "pnj",
     "sjc",
@@ -108,7 +192,8 @@ function createGoldReportValues(index, steps) {
     const randomNumber = Math.floor(Math.random() * 15) / 100;
     const randomRatio = Math.max(0.1, randomNumber);
     const upDown = Math.ceil(Math.random() * 10) % 2 ? 1 : -1;
-    const reportTime = now.add(-1 * (index + i), "m").valueOf();
+    const upDownTime = future ? 1 : -1;
+    const reportTime = now.add(upDownTime * (index + i), "m").valueOf();
     goldTypes.map((goldType) => {
       const [buy, sell] = goldTypeRanges[goldType];
       values.push({
@@ -122,14 +207,14 @@ function createGoldReportValues(index, steps) {
   return values;
 }
 
-async function createGoldReportData(db) {
+async function createGoldReportData(db, future = false) {
   // draw every minute, 24hours, 365 days, 5 years
   const maximumRecords = 60 * 24 * 365 * 5;
   const STEPS = 10_000;
   // insert
   const insertGoldReportData = (...args) => {
     const [offset, steps] = args;
-    const values = createGoldReportValues(offset, steps);
+    const values = createGoldReportValues(offset, steps, future);
     insertReportData(db, "goldReports", values)
       .then((res) => {
         console.log(`${offset}/${maximumRecords}`);
