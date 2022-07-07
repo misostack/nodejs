@@ -12,6 +12,19 @@ const faker = require("@faker-js/faker").default;
 const url = "mongodb://localhost:27017";
 const client = new MongoClient(url);
 
+// redis
+
+const Redis = require("ioredis");
+
+// Create a Redis instance.
+// By default, it will connect to localhost:6379.
+// We are going to cover how to specify connection options soon.
+const redis = new Redis({
+  port: 6379, // Redis port
+  host: "127.0.0.1", // Redis host
+  db: 0,
+});
+
 // Database Name
 const dbName = "sonnm_finance";
 
@@ -26,12 +39,13 @@ async function main() {
   await client.connect();
   console.log("Connected successfully to server");
   const db = client.db(dbName);
-  const startTime = dayjs();
+
   // await createGoldReportData(db, true);
-  const monthStats = await createStats(db, "Asia/Ho_Chi_Minh");
-  const endTime = dayjs();
-  console.log(monthStats);
-  console.error(`${endTime.diff(startTime, "milliseconds")}`);
+  const monthStats1 = await createStats(db, "Asia/Ho_Chi_Minh");
+  console.log(monthStats1);
+
+  const monthStats2 = await createStats(db, "Asia/Ho_Chi_Minh");
+  console.log(monthStats2);
   // the following code examples can be pasted here...
 
   return "done.";
@@ -85,21 +99,70 @@ async function createStats(db, timezone, statType = "months") {
     months: "months",
     years: "years",
   };
-  console.log(startTime.valueOf(), endTime.valueOf());
 
   // stream
+  const startTestTime = dayjs();
 
-  const hourSlots = createHourStats(db, endTime);
-
-  const stream = findStream(db, "goldReports", {
+  const hourSlots = createHourStats(endTime);
+  const daySlots = createDayStats(endTime);
+  const query = {
     reportTime: { $gte: startTime.valueOf(), $lte: endTime.valueOf() },
-  });
+  };
 
-  await stream.eachRecord(async (record) => {
-    addHourSlots(hourSlots, record);
-  });
+  // cache
+  const cachedRecords = await redis.get("goldReports");
+  let count = 0;
+  if (cachedRecords) {
+    const records = JSON.parse(cachedRecords);
+    records
+      .filter((record) => isInRange(hourSlots, record))
+      .map((record) => {
+        count++;
+        addHourSlots(hourSlots, record);
+      });
+    // await Promise.all(
+    //   cachedRecords.map(async (key) => {
+    //     console.error(key);
+    //     const record = await redis.get(key);
+    //     count++;
+    //     addHourSlots(hourSlots, JSON.parse(record));
+    //   })
+    // );
+  } else {
+    const stream = findStream(db, "goldReports", query);
+    const records = [];
+    await stream.eachRecord(async (record) => {
+      records.push(record);
+      // await redis.set(
+      //   `record_${record._id.toString()}`,
+      //   JSON.stringify(record)
+      // );
+      count++;
+      addHourSlots(hourSlots, record);
+    });
+    await redis.set("goldReports", JSON.stringify(records));
+  }
+  const endTestTime = dayjs();
 
-  return { hourSlots };
+  return {
+    count,
+    hourSlots,
+    different: `${endTestTime.diff(startTestTime, "milliseconds")}`,
+  };
+}
+
+function isInRange(hourSlots, record) {
+  for (let i = 0; i < hourSlots.length; i++) {
+    const end = hourSlots[i].timestamp;
+    const start = end.clone().add(-1, "minutes").startOf("milliseconds");
+    if (
+      record.reportTime >= start.valueOf() &&
+      record.reportTime < end.valueOf()
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function addHourSlots(hourSlots, record) {
@@ -107,13 +170,13 @@ function addHourSlots(hourSlots, record) {
     // in hour slot time range
     const end = hourSlots[i].timestamp;
     const start = end.clone().add(-1, "minutes").startOf("milliseconds");
-    console.log(
-      start.format(),
-      end.format(),
-      dayjs(record.reportTime).format(),
-      record.reportTime >= start.valueOf(),
-      record.reportTime < end.valueOf()
-    );
+    // console.log(
+    //   start.format(),
+    //   end.format(),
+    //   dayjs(record.reportTime).format(),
+    //   record.reportTime >= start.valueOf(),
+    //   record.reportTime < end.valueOf()
+    // );
     if (
       record.reportTime >= start.valueOf() &&
       record.reportTime < end.valueOf()
@@ -127,7 +190,6 @@ function addHourSlots(hourSlots, record) {
     let values = hourSlots[i].records.reduce((prev, next) => {
       return { sell: prev.sell + next.sell, buy: prev.buy + next.buy };
     }, initialValue);
-    console.log(values);
     hourSlots[i] = {
       ...hourSlots[i],
       values,
@@ -151,8 +213,23 @@ function addHourSlots(hourSlots, record) {
   // });
 }
 
-function createHourStats(db, toTime) {
+function createHourStats(toTime) {
   // prepare hour slots : 60 slots, by minutes
+  const slots = [];
+  for (let i = 0; i < 60; i++) {
+    slots.push({
+      timestamp: toTime
+        .clone()
+        .startOf("minutes")
+        .add(-1 * i, "minutes"),
+      records: [],
+    });
+  }
+  return slots;
+}
+
+function createDayStats(toTime) {
+  // prepare hour slots : 288 slots, by minutes
   const slots = [];
   for (let i = 0; i < 60; i++) {
     slots.push({
