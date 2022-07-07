@@ -34,6 +34,16 @@ const EVT_CREATE_GOLD_RECORD = Symbol();
 
 const eventEmitter = new events.EventEmitter();
 
+const SLOT_ZERO = dayjs("2021-01-01").utc(true);
+
+const timestampToSlot = (timestamp, entrySlot = SLOT_ZERO) => {
+  const d = dayjs(timestamp).tz("UTC");
+  const differenceSeconds = d.diff(entrySlot, "seconds");
+  const differenceSlots =
+    Math.floor(differenceSeconds / 60) + (differenceSeconds % 60 == 0 ? 0 : 1);
+  return differenceSlots;
+};
+
 async function main() {
   // Use connect method to connect to the server
   await client.connect();
@@ -90,8 +100,8 @@ async function createStats(db, timezone, statType = "months") {
     .toArray();
   // const startTime = dayjs(findResult[0].reportTime).tz(timezone);
   const currentTime = dayjs().tz(timezone);
-  const endTime = currentTime.endOf("hours");
-  let startTime = endTime.clone().add(-1, "hours");
+  const endTime = currentTime.startOf("minutes");
+  let startTime = endTime.clone().add(-1, "months");
   const statTypes = {
     hours: "hours",
     days: "days",
@@ -104,7 +114,6 @@ async function createStats(db, timezone, statType = "months") {
   const startTestTime = dayjs();
 
   const hourSlots = createHourStats(endTime);
-  const daySlots = createDayStats(endTime);
   const query = {
     reportTime: { $gte: startTime.valueOf(), $lte: endTime.valueOf() },
   };
@@ -114,12 +123,16 @@ async function createStats(db, timezone, statType = "months") {
   let count = 0;
   if (cachedRecords) {
     const records = JSON.parse(cachedRecords);
-    records
-      .filter((record) => isInRange(hourSlots, record))
-      .map((record) => {
-        count++;
-        addHourSlots(hourSlots, record);
-      });
+    // hour slots
+    records.slice(0, 60).map((record) => {
+      count++;
+      addHourSlots(hourSlots, record);
+    });
+    // day slots
+
+    // month slots
+    // year slots
+
     // await Promise.all(
     //   cachedRecords.map(async (key) => {
     //     console.error(key);
@@ -132,7 +145,11 @@ async function createStats(db, timezone, statType = "months") {
     const stream = findStream(db, "goldReports", query);
     const records = [];
     await stream.eachRecord(async (record) => {
-      records.push(record);
+      const slot = timestampToSlot(record.reportTime);
+      records.push({
+        ...record,
+        slot,
+      });
       // await redis.set(
       //   `record_${record._id.toString()}`,
       //   JSON.stringify(record)
@@ -140,7 +157,10 @@ async function createStats(db, timezone, statType = "months") {
       count++;
       addHourSlots(hourSlots, record);
     });
-    await redis.set("goldReports", JSON.stringify(records));
+    await redis.set(
+      "goldReports",
+      JSON.stringify(records.sort((a, b) => -1 * (a.slot - b.slot)))
+    );
   }
   const endTestTime = dayjs();
 
@@ -168,15 +188,6 @@ function isInRange(hourSlots, record) {
 function addHourSlots(hourSlots, record) {
   for (let i = 0; i < hourSlots.length; i++) {
     // in hour slot time range
-    const end = hourSlots[i].timestamp;
-    const start = end.clone().add(-1, "minutes").startOf("milliseconds");
-    // console.log(
-    //   start.format(),
-    //   end.format(),
-    //   dayjs(record.reportTime).format(),
-    //   record.reportTime >= start.valueOf(),
-    //   record.reportTime < end.valueOf()
-    // );
     if (
       record.reportTime >= start.valueOf() &&
       record.reportTime < end.valueOf()
@@ -195,26 +206,11 @@ function addHourSlots(hourSlots, record) {
       values,
     };
   }
-  // const slots = hourSlots.map((slot) => {
-  //   let initialValue = { sell: 0, buy: 0 };
-  //   let values = slot.records.reduce((prev, next) => {
-  //     prev
-  //       ? { sell: prev.sell + next.sell, buy: prev.buy + next.buy }
-  //       : {
-  //           sell: next.sell,
-  //           buy: next.buy,
-  //         };
-  //   }, initialValue);
-
-  //   return {
-  //     ...slot,
-  //     values,
-  //   };
-  // });
 }
 
 function createHourStats(toTime) {
   // prepare hour slots : 60 slots, by minutes
+  const maxSlot = timestampToSlot(toTime);
   const slots = [];
   for (let i = 0; i < 60; i++) {
     slots.push({
@@ -222,6 +218,7 @@ function createHourStats(toTime) {
         .clone()
         .startOf("minutes")
         .add(-1 * i, "minutes"),
+      slot: maxSlot - i,
       records: [],
     });
   }
