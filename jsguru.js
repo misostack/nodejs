@@ -10,6 +10,7 @@ const serviceAccount = require("./jsguru-firebase-admin-sdk.json");
 var auth = null;
 
 app.use(cors());
+app.use(express.json());
 
 const jwt = require("jsonwebtoken");
 
@@ -24,6 +25,19 @@ const getAuth = () => {
 };
 
 app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
+
+app.get("/firebaseConfig", (req, res) => {
+  const firebaseConfig = {
+    ...serviceAccount,
+  };
+  res.send({ firebaseConfig });
+});
+
+app.get("/notification/:userId/:number", (req, res) => {
+  const { userId, number } = req.params;
+
   res.send("Hello World!");
 });
 
@@ -44,7 +58,7 @@ app.get("/revoke/:uid", (req, res) => {
 });
 
 app.post("/login", async (req, res) => {
-  const userId = "1";
+  const userId = req.body.userId;
   const additionalClaims = {
     premiumAccount: false,
   };
