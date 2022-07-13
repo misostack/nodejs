@@ -6,3 +6,6 @@ node_modules
 **/*.mp4
 
 !mysql/*.txt
+
+jsguru-firebase-admin-sdk.json
+.env
