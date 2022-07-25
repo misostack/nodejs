@@ -8,6 +8,7 @@ const admin = require("firebase-admin");
 
 const serviceAccount = require("./jsguru-firebase-admin-sdk.json");
 var auth = null;
+var messaging = null;
 
 app.use(cors());
 app.use(express.json());
@@ -19,10 +20,61 @@ const connectFirebase = () => {
     credential: admin.credential.cert(serviceAccount),
   });
   auth = admin.auth(app);
+  messaging = admin.messaging(app);
 };
 const getAuth = () => {
   return auth;
 };
+
+app.get("/send-fcm/:token", (req, res) => {
+  // This registration token comes from the client FCM SDKs.
+  const registrationToken = req.params.token;
+  // TokenMessage > BaseMessage
+  // https://firebase.google.com/docs/reference/admin/node/firebase-admin.messaging.basemessage.md#basemessage_interface
+  const message = {
+    // https://firebase.google.com/docs/reference/admin/node/firebase-admin.messaging.webpushnotification
+    // WebpushNotification
+    notification: {
+      title: "Notification A",
+      body: "You have a new message in app jsguru.net",
+      image:
+        "https://blog.jsguru.net/themes/2022/src/assets/images/2phut-logo.png",
+    },
+    webpush: {
+      notification: {
+        title: "Notification A",
+        body: "You have a new message in app jsguru.net",
+        image:
+          "https://blog.jsguru.net/themes/2022/src/assets/images/2phut-logo.png",
+        actions: [{ action: "ACTION_A", title: "Open Specific Page" }],
+      },
+    },
+    // A collection of data fields.
+    // { [key: string]: string; }
+    data: {
+      action: "ACTION_A",
+      payload: JSON.stringify({
+        a: 1,
+        b: 2,
+      }),
+    },
+    token: registrationToken,
+  };
+
+  // Send a message to the device corresponding to the provided
+  // registration token.
+  messaging
+    .send(message)
+    .then((response) => {
+      // Response is a message ID string.
+      console.log("Successfully sent message:", response);
+      res.send(response);
+    })
+    .catch((error) => {
+      console.log("Error sending message:", error);
+      res.send(error);
+    });
+});
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
