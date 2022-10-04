@@ -128,3 +128,7 @@ new Counter();
 - email
 - uri
 - pattern
+
+## Javascript Standard built-in Objects
+
+### 1. Reflection
