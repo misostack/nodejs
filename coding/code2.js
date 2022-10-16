@@ -6,7 +6,7 @@
 
 function solutionA(A) {
   // A's length is odd number return false
-  if (A.length % 2 != 0) return false;
+  if (A.length == 0 || A.length % 2 != 0) return false;
   let sortedA = A.sort((a, b) => a - b);
   // if there is any number in even index is not equal its next number in the sorted array
   // it meaned it can not be paired
@@ -16,6 +16,7 @@ function solutionA(A) {
   return true;
 }
 // run test
+console.log(solutionA([]));
 console.log(solutionA([1, 2, 2, 1]));
 console.log(solutionA([7, 7, 7]));
 console.log(solutionA([1, 2, 2, 3]));
