@@ -132,3 +132,10 @@ new Counter();
 ## Javascript Standard built-in Objects
 
 ### 1. Reflection
+
+## v8 benchmark
+
+```bash
+node --prof-process marked-duplicated.js > marked-duplicated-prof.log
+# node --prof --no-logfile-per-isolate --log --logfile=marked-duplicated.log marked-duplicated.js
+```
