@@ -11,7 +11,7 @@ const sequelize = new Sequelize(
   "mysql://root:123456@localhost:3306/nestjs_examples",
   {
     pool: {
-      max: 2,
+      max: 1,
       min: 1,
       acquire: 60000,
       idle: 10000,
